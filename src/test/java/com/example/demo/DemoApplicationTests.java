@@ -1,12 +1,13 @@
 package com.example.demo;
 
 import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
+import org.eclipse.jetty.client.HttpClient;
+import org.eclipse.jetty.client.HttpProxy;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.http.client.reactive.ReactorClientHttpConnector;
+import org.springframework.http.client.reactive.JettyClientHttpConnector;
 import org.springframework.web.reactive.function.client.WebClient;
-import reactor.netty.http.client.HttpClient;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
@@ -31,9 +32,11 @@ class DemoApplicationTests {
         );
 
         System.setProperty("http.proxyHost", "localhost");
-        System.setProperty("http.proxyPort", Integer.toString(wm1.getRuntimeInfo().getHttpPort()));
+        System.setProperty("http.proxyPort", "10001");
+        HttpClient httpClient = new HttpClient();
+        httpClient.getProxyConfiguration().getProxies().add(new HttpProxy("localhost", wm1.getRuntimeInfo().getHttpPort()));
 
-        WebClient client = WebClient.builder().clientConnector(new ReactorClientHttpConnector(HttpClient.create().proxyWithSystemProperties())).build();
+        WebClient client = WebClient.builder().clientConnector(new JettyClientHttpConnector(httpClient)).build();
         String result = client.get().uri("http://example.com").retrieve().bodyToMono(String.class).block();
 
         assertEquals("foo", result);
